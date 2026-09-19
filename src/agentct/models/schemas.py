@@ -54,3 +54,25 @@ For Metacognition:
 class MetaOutput(BaseModel):
     metacognition_score: float
     metacognition_reasoning: str
+
+
+"""
+For Keywords extraction:
+"""
+class KeywordExtraction(BaseModel):
+    """
+    keywords: str = Field(description="Comma-separated keywords only, no labels or extra text")
+    """
+    keywords: str
+
+
+"""
+For Final report:
+"""
+class FinalReport(BaseModel):
+    """
+    keywords: str = Field(description="Comma-separated keywords only, no labels or extra text")
+    """
+    conclusion: str
+    confidence: float
+    key_reasoning: str
