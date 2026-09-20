@@ -15,7 +15,7 @@ def search_openalex(query: str, limit: int = 5, email: str = EMAIL) -> list[dict
         email (str): Contact email for OpenAlex's polite pool (faster, higher rate limits).
 
     Returns:
-        list[dict]: A list of dicts with 'title', 'content' (abstract), and 'url' keys.
+        list[dict]: A list of dicts with 'title', 'content' (abstract), and 'url' keys, and 'authors' key.
     """
     url = "https://api.openalex.org/works"
     params = {
@@ -38,6 +38,7 @@ def search_openalex(query: str, limit: int = 5, email: str = EMAIL) -> list[dict
             "title": result.get("title", "No title"),
             "content": abstract,
             "url": result.get("id", "No URL"),
+            "authors": [author.get("author", {}).get("display_name", "Unknown") for author in result.get("authorships", [])]
         })
 
     return formatted_results

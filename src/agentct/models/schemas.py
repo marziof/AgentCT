@@ -17,8 +17,11 @@ class SourceAssessment(BaseModel):
     expertise_score: float
     expertise_reasoning: str
 
+class SourceAssessments(BaseModel):
+    source_assessments: list[SourceAssessment]
+
 class SourceOutput(BaseModel):
-    sources: list[SourceAssessment]
+    source_assessments: list[SourceAssessment]
     concordance_score: float
     concordance_reasoning: str
     overall_confidence: float
