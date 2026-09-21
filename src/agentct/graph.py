@@ -30,22 +30,24 @@ def retrieve_sources_node(state: AgentState) -> dict:
     key_words_response = invoke_with_retry(structured_model_with_keywords, prompt)
     query = key_words_response.keywords
     print(f"Extracted key words: {query}")
-    retrieved_docs = search_openalex(query, limit=3)
+    retrieved_docs = search_openalex(query, limit=5)
     return {"retrieved_docs": retrieved_docs}
 
 def assess_source_node(state: AgentState) -> dict:
     # Placeholder for source assessment logic
     prompt = f"Please provide an assessment of the following claim: {state.claim} based on the following sources: {', '.join([doc['title'] for doc in state.retrieved_docs])}. " \
-                "For each source, you should provide a stance (support or oppose) with respect to the claim, " \
-                "a benevolence score (0-1) that reflects the source's benevolence, as well as benevolence reasoning explaining the score, " \
-                "an expertise score (0-1) that reflects the source's expertise, as well as expertise reasoning. "
+            "For each source, you should provide a stance (support or oppose) with respect to the claim, " \
+            "a benevolence score (in range 0-1) that reflects the source's benevolence (0 if the source may have private interests, 1 if the source is completely objective), as well as benevolence reasoning explaining the score, " \
+            "an expertise score (in range 0-1) that reflects the source's expertise SPECIFICALLY IN THE SUBJECT MATTER OF THE CLAIM " \
+            "(0 if the source's field is unrelated or only tangentially related to the claim, even if it is authoritative in its own field; 1 if the source is a recognized expert directly in the claim's specific subject area), as well as expertise reasoning that explicitly addresses how relevant the source's domain is to this specific claim. " \
+            "If a source discusses a related but different topic (e.g. general health or a different intervention) rather than the claim's specific subject, its expertise score should be low regardless of its general credibility."
 
     structured_response = invoke_with_retry(structured_model, prompt)
     source_assessments = structured_response.source_assessments
     concordance = concordance_score(source_assessments)
     confidence = confidence_score(source_assessments)
-    concordance_reasoning = "expert sources agree on the stance" if concordance == 1.0 else "expert sources disagree on the stance"
-    confidence_reasoning = "sources support the claim" if confidence == 1.0 else "sources oppose the claim"
+    concordance_reasoning = "expert sources agree on the stance" if concordance == 1.0 else "experts mostly agree" if concordance > 0.5 else "experts are divided" 
+    confidence_reasoning = "sources support the claim" if confidence == 1.0 else "sources mostly support the claim" if confidence > 0.5 else "sources oppose the claim"
     #confidence_reasoning = #llm.invoke(input=f"Please provide a brief reasoning for the overall confidence score of {confidence} based on the source assessments: {source_assessments}.").content
     source_output_value = SourceOutput(
         source_assessments=source_assessments,
@@ -59,7 +61,7 @@ def assess_source_node(state: AgentState) -> dict:
 def return_report_node(state: AgentState) -> dict:
     # Placeholder for returning the final report    
     prompt = f"Based on the source assessment in {state.source_output}, please provide a final report on the claim: {state.claim}. " \
-                "Summarize the key points and provide a clear conclusion."
+                "Summarize the key points and provide a clear conclusion in 2-3 sentences."
     final_report_value = invoke_with_retry(structured_model_with_final_report, prompt)
     return {"final_report": final_report_value}
 
