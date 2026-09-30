@@ -41,7 +41,10 @@ def search_openalex(query: str, limit: int = 5, email: str = EMAIL) -> list[dict
             "authors": [author.get("author", {}).get("display_name", "Unknown") for author in result.get("authorships", [])],
             "openalex_id": result.get("id"),
             "has_content": result.get("has_content", {}),
-            "content_urls": result.get("content_urls", {})
+            "content_urls": result.get("content_urls", {}),
+            "open_access": result.get("open_access", {}),
+            "pmcid": result.get("ids", {}).get("pmcid"),
+            "doi": result.get("doi"),
         })
 
     return formatted_results
