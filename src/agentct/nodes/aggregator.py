@@ -11,8 +11,10 @@ structured_model_with_keywords = llm.with_structured_output(KeywordExtraction)
 structured_model_with_final_report = llm.with_structured_output(FinalReport)
 
 def return_report_node(state: AgentState) -> dict:
-    # Placeholder for returning the final report    
-    prompt = f"Based on the source assessment in {state.source_output}, please provide a final report on the claim: {state.claim}. " \
-                "Summarize the key points and provide a clear conclusion in 2-3 sentences."
+    prompt = f"Based on the following assessments of the claim '{state.claim}':\n\n" \
+             f"Source quality: {state.source_output}\n\n" \
+             f"Evidence quality: {state.evidence_output}\n\n" \
+             f"Argument quality: {state.arg_output}\n\n" \
+             "Please provide a final report summarizing the key points and a clear conclusion."
     final_report_value = invoke_with_retry(structured_model_with_final_report, prompt)
     return {"final_report": final_report_value}

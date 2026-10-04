@@ -7,6 +7,16 @@ from src.agentct.graph import graph, compiled_graph
 from src.agentct.state import AgentState
 
 
+examples = ["Smoking tobacco is beneficial for your health.", 
+            "Eating a diet rich in fruits and vegetables reduces the risk of developing cardiovascular diseases.",
+            "Moderate alcohol consumption is good for cardiovascular health.",
+            "Climate change is primarily caused by human activities.",
+            "Vaccines are safe and effective in preventing infectious diseases.",
+            "The use of genetically modified organisms (GMOs) in agriculture is safe for human consumption."]   
+print("=== Example test claims ===")
+for i, example in enumerate(examples, start=1):
+    print(f"{i}. {example}")
+
 claim = input("Enter a claim to test: ")  # Example: "Moderate alcohol consumption is good for cardiovascular health."
 #claim = "Moderate alcohol consumption is good for cardiovascular health." #"Smoking tobacco is beneficial for your health."
 # retrieved_docs = [

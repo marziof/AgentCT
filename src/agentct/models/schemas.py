@@ -36,19 +36,39 @@ class PlausibilityOutput(BaseModel):
     plausibility_reasoning: str
 
 """
-For Arguments:
-"""
-class ArgOutput(BaseModel):
-    arguments_score: float
-    arguments_reasoning: str
-
-
-"""
 For Evidence:
 """
+class EvidenceItem(BaseModel):
+    source_id: str
+    evidence_type: str
+    finding: str
+    relevance: str
+    strengths: str
+    limitations: str
+    supporting_passages: list[str]
+
 class EvidenceOutput(BaseModel):
-    evidence_score: float
-    evidence_reasoning: str
+    evidence_items: list[EvidenceItem]
+    overall_evidence_score: float
+    overall_evidence_reasoning: str
+
+"""
+For Arguments:
+"""
+class ArgumentItem(BaseModel):
+    source_id: str
+    premises: str
+    conclusion: str
+    assumptions: str
+    counterarguments: str
+    weaknesses: str
+    supporting_passages: list[str]
+
+
+class ArgOutput(BaseModel):
+    argument_items: list[ArgumentItem]
+    overall_argument_score: float
+    overall_argument_reasoning: str
 
 
 """
