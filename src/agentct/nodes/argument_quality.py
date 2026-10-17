@@ -1,74 +1,132 @@
-from langgraph.graph import StateGraph, END
 
 from src.agentct.state import AgentState
 from src.agentct.models.schemas import ArgOutput
-
 from src.agentct.utils.retry import invoke_with_retry
-
 from src.agentct.config import llm
 
 
-# placeholder function to assess the quality of arguments based on the retrieved passages
-
-structured_model_argument = llm.with_structured_output(ArgOutput)
+structured_model_argument = llm.with_structured_output(ArgOutput, method="json_schema")
 
 
 def assess_argument_node(state: AgentState) -> dict:
+    '''
+    Assess the quality of the reasoning in the supplied passages in relation
+    to the claim. Return structured output according to the ArgOutput schema.
+    '''
+
     if not state.relevant_passages:
+            return {
+                "arg_output": ArgOutput(
+                    argument_items=[],
+                    overall_argument_score=0.0,
+                    overall_argument_reasoning=(
+                        "No relevant passages were retrieved, so the argument "
+                        "could not be assessed."
+                    ),
+                )
+            }
+    
+    MAX_PASSAGES = 6
+    MAX_CHARS_PER_PASSAGE = 2500
+
+    passages = state.relevant_passages[:MAX_PASSAGES]
+
+    passages_text = "\n\n".join(
+        f"[Source ID: {p['source_id']}]\n"
+        f"{p['text'][:MAX_CHARS_PER_PASSAGE]}"
+        for p in passages
+    )
+
+
+    valid_source_ids = {
+        str(p["source_id"])
+        for p in state.relevant_passages
+        if p.get("source_id") is not None
+    }
+
+    prompt = f"""
+        Assess the quality of the reasoning in the supplied passages in relation
+        to this claim.
+
+        CLAIM:
+        {state.claim}
+
+        PASSAGES:
+        {passages_text}
+
+        INSTRUCTIONS:
+
+        Return one argument item per distinct source containing a relevant
+        argument. Combine multiple passages from the same source into one item.
+
+        Return at most 3 argument items.
+
+        For every argument item, provide these fields according to the schema:
+
+        - 'source_id': the exact source ID shown in the supplied passages.
+        - 'premises': a list of up to 3 propositions used to support the conclusion.
+        - 'conclusion': the main conclusion relevant to the claim.
+        - 'assumptions': a list of up to 3 important assumptions underlying
+        the reasoning from premises to conclusion.
+        - 'counterarguments': a list of up to 3 relevant objections, alternative
+        explanations, or competing interpretations.
+        - 'weaknesses': list of at most 3 strings describing the main reasoning weaknesses or gaps (1 sentence for each).
+        - 'supporting_passages': a list of strings (at most 3). Each string must identify
+        a relevant supplied passage using its first 3 words followed by "...". 
+
+        Use only information supported by the supplied passages.
+        Do not invent premises, conclusions, or source IDs.
+        If a list category is unsupported, return an empty list.
+
+        Evaluate reasoning quality, not whether the source agrees with the claim.
+        Do not treat multiple passages from the same source as independent arguments.
+
+        Set overall_argument_score between 0.0 and 1.0 and explain the score
+        in 'overall_argument_reasoning'.
+
+        If no relevant arguments are present, return an empty argument_items
+        list and explain why.
+        """
+
+    try:
+        arg_output = invoke_with_retry(
+            structured_model_argument,
+            prompt,
+        )
+
+        unexpected_ids = {
+            str(item.source_id)
+            for item in arg_output.argument_items
+        } - valid_source_ids
+
+        if unexpected_ids:
+            raise ValueError(
+                f"Unknown source IDs in argument output: {unexpected_ids}"
+            )
+
+        arg_output.argument_items = arg_output.argument_items[:3]
+        for item in arg_output.argument_items:
+            item.supporting_passages = item.supporting_passages[:3]
+
+        return {
+            "arg_output": arg_output,
+            "argument_assessment_error": None,
+        }
+
+
+    except Exception as exc:
         return {
             "arg_output": ArgOutput(
                 argument_items=[],
                 overall_argument_score=0.0,
                 overall_argument_reasoning=(
-                    "No relevant passages were retrieved, so the argument "
-                    "could not be assessed."
+                    "Argument assessment failed. "
+                    f"Error type: {type(exc).__name__}. "
+                    "The score is a fallback, not a genuine "
+                    "assessment of argument quality."
                 ),
-            )
+            ),
+            "argument_assessment_error": (
+                f"{type(exc).__name__}: {exc}"
+            ),
         }
-
-    passages_text = "\n\n".join(
-        f"[Source: {p['source_id']}]\n{p['text']}"
-        for p in state.relevant_passages
-    )
-    prompt = (
-        f"Please provide an assessment of the arguments for the following claim: "
-        f"{state.claim} based on the following passages:\n\n"
-        f"{passages_text}\n\n"
-
-        "For each distinct source represented in the passages, you should provide "
-        "an argument item with a source_id identifying the source, "
-        
-        "premises describing the main claims or propositions from the source "
-        "that are used to support its conclusion, "
-        
-        "a conclusion describing the main conclusion reached by the source "
-        "that is relevant to the claim, "
-        
-        "assumptions describing important assumptions underlying the reasoning "
-        "from the premises to the conclusion, "
-        
-        "counterarguments describing relevant alternative explanations, objections, "
-        "or competing interpretations, "
-        
-        "weaknesses describing the main weaknesses or gaps in the reasoning "
-        "(1 sentence), "
-        
-        "and supporting_passages identifying the most relevant passage from that "
-        "source using only its first 3 words followed by '...'. "
-        
-        "You should then provide an overall_argument_score in the range 0-1 "
-        "reflecting the overall quality of the reasoning across the sources, "
-        "as well as overall_argument_reasoning explaining the score. "
-        
-        "Evaluate the quality of the reasoning, not whether the source agrees "
-        "with the claim. Do not invent arguments that are not supported by the "
-        "provided passages. Multiple passages from the same source must be treated "
-        "as belonging to one source, not as independent arguments."
-    )
-
-    argument_output = invoke_with_retry(
-        structured_model_argument,
-        prompt
-    )
-
-    return {"arg_output": argument_output}

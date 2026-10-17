@@ -38,19 +38,58 @@ initial_state = AgentState(
 
 result = compiled_graph.invoke(initial_state)
 
+print("\n=== RETRIEVAL STATS ===")
+print(result.get("retrieval_stats", "MISSING retrieval_stats"))
+
+print("\n=== RELEVANT PASSAGES ===")
+passages = result.get("relevant_passages", [])
+print(f"Passages returned: {len(passages)}")
+
+for i, passage in enumerate(passages, start=1):
+    print(f"\nPassage {i}")
+    print(f"  source_id: {passage.get('source_id')}")
+    print(f"  text_basis: {passage.get('text_basis', 'MISSING')}")
+    print(f"  text preview: {passage.get('text', '')[:200]!r}")
+
 # print("=== Full result ===")
 # print(result)
 
+# print source output (example for one source, then concordance and support scores)
 print("\n=== source_output ===")
 source_output = result.get("source_output")
 if source_output:
     for i, src in enumerate(source_output.source_assessments, start=1):
-        print(f"Source {i}: {src.source}")
-        print(f"  Stance: {src.stance}")
-        print(f"  Benevolence: {src.benevolence_score} — {src.benevolence_reasoning}")
-        print(f"  Expertise: {src.expertise_score} — {src.expertise_reasoning}")
+        print(f"{i}. {src.source[:60]} | {src.stance} | B={src.benevolence_score} E={src.expertise_score}")
     print(f"\nConcordance: {source_output.concordance_score} — {source_output.concordance_reasoning}")
-    print(f"Overall confidence: {source_output.overall_confidence} — {source_output.overall_confidence_reasoning}")
+    print(f"Support: {source_output.overall_support} — {source_output.overall_support_reasoning}")
+
+
+print("\n=== evidence_output ===")
+evidence_output = result.get("evidence_output")
+if evidence_output:
+    for i, item in enumerate(evidence_output.evidence_items, start=1):
+        if i==1:  # Only print the first evidence item for brevity
+            print(f"Evidence {i}: {item.source_id}")
+            print(f"  Relevance: {item.relevance}")
+            print(f"  Strengths: {item.strengths}")
+            print(f"  Limitations: {item.limitations}")
+    print(f"\nOverall Evidence Score: {evidence_output.overall_evidence_score} — {evidence_output.overall_evidence_reasoning}")
+
+
+print("\n=== arg_output ===")
+arg_output = result.get("arg_output")
+if arg_output:
+    for i, item in enumerate(arg_output.argument_items, start=1):
+        if i==1:  # Only print the first argument item for brevity
+            print(f"Argument {i}: {item.source_id}")
+            print(f"  Premises: {item.premises}")
+            print(f"  Conclusion: {item.conclusion}")
+            print(f"  Assumptions: {item.assumptions}")
+            print(f"  Counterarguments: {item.counterarguments}")
+            print(f"  Weaknesses: {item.weaknesses}")
+            print(f"  Supporting Passages: {item.supporting_passages}")
+    print(f"\nOverall Argument Score: {arg_output.overall_argument_score} — {arg_output.overall_argument_reasoning}")
+
 
 print("\n=== final_report ===")
 final_report = result.get("final_report")

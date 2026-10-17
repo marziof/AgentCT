@@ -28,22 +28,24 @@ def concordance_score(sources: SourceAssessments) -> float:
         return 0.0  # No expert sources to compare
 
     stances = [s.stance for s in expert_sources]
-    # concordance as proportion of expert sources that agree on the stance
+    # support as proportion of expert sources that support the claim
     max_stance_count = max(stances.count("support"), stances.count("oppose"))
     concordance = max_stance_count / len(expert_sources)
     return concordance
 
 
-def confidence_score(sources: SourceAssessments) -> float:
+def support_score(sources: SourceAssessments) -> float:
     """
-    Calculate the overall confidence score in a claim based on the concordance, benevolence, and expertise scores of sources.
+    Calculate the overall support score in a claim based on the concordance, benevolence, and expertise scores of sources.
 
     Args:
         sources (list): A list of source assessments, each containing a stance and an expertise score.
         concordance (float): The concordance score (0-1) between expert sources.
+        benevolence (float): The benevolence score (0-1) of the sources.
+        expertise (float): The expertise score (0-1) of the sources.
 
     Returns:
-        float: The overall confidence score (0-1) in the claim.
+        float: The overall support score (0-1) in the claim.
     """
     def stance_value(source: SourceAssessment) -> float:
         if source.stance == "support":
